@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Task & Email Agent</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css" />
+  <script src="https://accounts.google.com/gsi/client" async></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f5f5f3;
+      --bg-tertiary: #eeede8;
+      --text-primary: #1a1a18;
+      --text-secondary: #6b6b66;
+      --text-tertiary: #9b9b96;
+      --border-subtle: rgba(0,0,0,0.1);
+      --border-mid: rgba(0,0,0,0.18);
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-primary: #1e1e1c;
+        --bg-secondary: #2a2a27;
+        --bg-tertiary: #313130;
+        --text-primary: #f0efea;
+        --text-secondary: #a0a09a;
+        --text-tertiary: #6b6b66;
+        --border-subtle: rgba(255,255,255,0.08);
+        --border-mid: rgba(255,255,255,0.15);
+      }
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      padding: 2rem 1rem;
+    }
+
+    .container { max-width: 680px; margin: 0 auto; }
+
+    /* Header */
+    .app-header {
+      display: flex; align-items: center; gap: 12px;
+      background: var(--bg-primary);
+      border: 0.5px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 14px 18px;
+      margin-bottom: 1rem;
+    }
+    .app-icon {
+      width: 40px; height: 40px; border-radius: var(--radius-md);
+      background: #E6F1FB; display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .app-icon i { font-size: 20px; color: #185FA5; }
+    .app-title { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+    .app-subtitle { font-size: 12px; color: var(--text-secondary); margin-top: 1px; }
+
+    /* Badge */
+    .badge { font-size: 11px; padding: 3px 9px; border-radius: 20px; font-weight: 500; }
+    .badge-green { background: #EAF3DE; color: #27500A; }
+    .badge-amber { background: #FAEEDA; color: #633806; }
+    .badge-blue { background: #E6F1FB; color: #0C447C; }
+    .badge-gray { background: #F1EFE8; color: #444441; }
+    .badge-red { background: #FCEBEB; color: #791F1F; }
+
+    /* User bar */
+    .user-bar {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--bg-secondary);
+      border-radius: var(--radius-md);
+      padding: 8px 12px;
+      margin-bottom: 1rem;
+    }
+    .avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
+    .avatar-placeholder {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: #E6F1FB; display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 500; color: #185FA5; flex-shrink: 0;
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex; gap: 2px;
+      background: var(--bg-primary);
+      border: 0.5px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 4px;
+      margin-bottom: 1rem;
+    }
+    .tab {
+      flex: 1; padding: 8px 4px; font-size: 13px;
+      border: none; background: transparent; cursor: pointer;
+      color: var(--text-secondary); border-radius: var(--radius-md);
+      transition: all 0.15s; font-family: var(--font);
+      display: flex; align-items: center; justify-content: center; gap: 5px;
+    }
+    .tab.active { background: var(--bg-secondary); color: var(--text-primary); font-weight: 500; }
+    .tab:hover:not(.active) { color: var(--text-primary); }
+    .tab i { font-size: 15px; }
+
+    /* Section */
+    .section { display: none; }
+    .section.active { display: block; }
+
+    /* Card */
+    .card {
+      background: var(--bg-primary);
+      border: 0.5px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 1rem 1.25rem;
+      margin-bottom: 1rem;
+    }
+    .card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .card-title {
+      font-size: 14px; font-weight: 600; color: var(--text-primary);
+      display: flex; align-items: center; gap: 7px;
+    }
+    .card-title i { font-size: 16px; color: var(--text-secondary); }
+
+    /* Stats */
+    .stat-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 1rem; }
+    .stat { background: var(--bg-secondary); border-radius: var(--radius-md); padding: 10px 12px; }
+    .stat-val { font-size: 22px; font-weight: 600; color: var(--text-primary); }
+    .stat-label { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+
+    /* Reminder strip */
+    .reminder-strip {
+      background: #E6F1FB; border: 0.5px solid #B5D4F4;
+      border-radius: var(--radius-md); padding: 10px 14px;
+      display: flex; align-items: center; gap: 10px; margin-bottom: 1rem;
+    }
+    .reminder-strip p { font-size: 13px; color: #0C447C; flex: 1; }
+    .reminder-strip strong { color: #0C447C; }
+
+    /* Task list */
+    .task-item {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 10px 0; border-bottom: 0.5px solid var(--border-subtle);
+    }
+    .task-item:last-child { border-bottom: none; padding-bottom: 0; }
+    .task-check {
+      width: 18px; height: 18px; border-radius: 50%;
+      border: 1.5px solid var(--border-mid); cursor: pointer;
+      flex-shrink: 0; margin-top: 2px;
+      display: flex; align-items: center; justify-content: center; transition: all 0.15s;
+    }
+    .task-check.done { background: #639922; border-color: #639922; }
+    .task-check.done::after {
+      content: ''; width: 6px; height: 4px;
+      border-left: 1.5px solid white; border-bottom: 1.5px solid white;
+      transform: rotate(-45deg) translateY(-1px); display: block;
+    }
+    .task-name { font-size: 14px; color: var(--text-primary); }
+    .task-name.done { text-decoration: line-through; color: var(--text-secondary); }
+    .task-meta { font-size: 12px; color: var(--text-tertiary); margin-top: 2px; }
+    .task-due { font-size: 11px; padding: 2px 7px; border-radius: 4px; flex-shrink: 0; margin-top: 2px; }
+    .due-today { background: #FAEEDA; color: #633806; }
+    .due-overdue { background: #FCEBEB; color: #791F1F; }
+    .due-done { background: #EAF3DE; color: #27500A; }
+
+    /* List tabs */
+    .list-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+    .list-tab {
+      padding: 4px 12px; font-size: 12px; border-radius: 20px;
+      border: 0.5px solid var(--border-subtle); cursor: pointer;
+      background: transparent; color: var(--text-secondary);
+      font-family: var(--font); transition: all 0.15s;
+    }
+    .list-tab.active { background: #E6F1FB; color: #0C447C; border-color: #B5D4F4; }
+
+    /* Add task row */
+    .add-task-row { display: flex; gap: 8px; margin-top: 12px; }
+    .add-task-row input { flex: 1; }
+
+    /* Form elements */
+    label { font-size: 13px; color: var(--text-secondary); display: block; margin-bottom: 4px; margin-top: 14px; }
+    label:first-of-type { margin-top: 0; }
+
+    input[type="text"], input[type="email"], input[type="time"], input[type="password"], select, textarea {
+      width: 100%; padding: 8px 12px; font-size: 14px; font-family: var(--font);
+      background: var(--bg-secondary); color: var(--text-primary);
+      border: 0.5px solid var(--border-mid); border-radius: var(--radius-md);
+      outline: none; transition: border 0.15s;
+    }
+    input[type="time"], select { height: 36px; }
+    input:focus, select:focus, textarea:focus { border-color: #378ADD; }
+    textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
+
+    /* Buttons */
+    .btn {
+      padding: 8px 16px; font-size: 14px; border-radius: var(--radius-md);
+      cursor: pointer; font-family: var(--font); transition: all 0.15s;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .btn-primary {
+      background: var(--text-primary); color: var(--bg-primary); border: none;
+    }
+    .btn-primary:hover { opacity: 0.85; }
+    .btn-outline {
+      background: transparent; border: 0.5px solid var(--border-mid);
+      color: var(--text-primary);
+    }
+    .btn-outline:hover { background: var(--bg-secondary); }
+    .btn-sm { padding: 5px 12px; font-size: 13px; }
+    .btn-full { width: 100%; justify-content: center; }
+
+    /* Google button */
+    .google-btn {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      padding: 10px 20px; border: 0.5px solid var(--border-mid);
+      border-radius: var(--radius-md); background: var(--bg-primary);
+      cursor: pointer; font-size: 14px; color: var(--text-primary);
+      width: 100%; font-family: var(--font); transition: background 0.15s;
+    }
+    .google-btn:hover { background: var(--bg-secondary); }
+    .g-icon { width: 18px; height: 18px; flex-shrink: 0; }
+
+    /* Chips */
+    .task-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+    .chip {
+      font-size: 12px; padding: 4px 10px; border-radius: 20px;
+      border: 0.5px solid var(--border-mid); cursor: pointer;
+      color: var(--text-secondary); background: var(--bg-primary); transition: all 0.15s;
+      user-select: none;
+    }
+    .chip.selected { background: #E6F1FB; color: #0C447C; border-color: #B5D4F4; }
+
+    /* Email output */
+    .email-output {
+      background: var(--bg-secondary); border: 0.5px solid var(--border-subtle);
+      border-radius: var(--radius-md); padding: 1rem; font-size: 13px;
+      line-height: 1.75; color: var(--text-primary); white-space: pre-wrap; min-height: 120px;
+    }
+
+    /* Loading */
+    .loading-dots { display: inline-flex; gap: 4px; align-items: center; }
+    .loading-dots span {
+      width: 6px; height: 6px; border-radius: 50%; background: var(--text-secondary);
+      animation: dot-pulse 1.2s ease-in-out infinite;
+    }
+    .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes dot-pulse { 0%,80%,100%{opacity:0.2;transform:scale(0.8)} 40%{opacity:1;transform:scale(1)} }
+
+    .spinner {
+      display: inline-block; width: 16px; height: 16px;
+      border: 2px solid var(--border-subtle); border-top-color: var(--text-primary);
+      border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Toggle */
+    .toggle { position: relative; width: 36px; height: 20px; flex-shrink: 0; }
+    .toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .slider-toggle {
+      position: absolute; inset: 0; background: var(--border-mid);
+      border-radius: 20px; cursor: pointer; transition: 0.2s;
+    }
+    .slider-toggle::before {
+      content: ''; position: absolute; width: 14px; height: 14px;
+      left: 3px; top: 3px; background: white; border-radius: 50%; transition: 0.2s;
+    }
+    .toggle input:checked + .slider-toggle { background: #639922; }
+    .toggle input:checked + .slider-toggle::before { transform: translateX(16px); }
+
+    /* Schedule rows */
+    .schedule-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 0; border-bottom: 0.5px solid var(--border-subtle);
+    }
+    .schedule-row:last-child { border-bottom: none; }
+
+    /* Error / info strips */
+    .error-strip {
+      background: #FCEBEB; border: 0.5px solid #F7C1C1;
+      border-radius: var(--radius-md); padding: 10px 14px;
+      font-size: 13px; color: #791F1F; margin-bottom: 1rem;
+    }
+    .info-strip {
+      background: #E6F1FB; border: 0.5px solid #B5D4F4;
+      border-radius: var(--radius-md); padding: 10px 14px;
+      font-size: 13px; color: #0C447C; margin-bottom: 1rem;
+    }
+
+    /* Empty state */
+    .empty-state { text-align: center; padding: 2rem; color: var(--text-secondary); font-size: 14px; }
+
+    /* Divider */
+    .divider { height: 0.5px; background: var(--border-subtle); margin: 1rem 0; }
+
+    /* How it works steps */
+    .step { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 12px; }
+    .step-num {
+      width: 24px; height: 24px; border-radius: 50%;
+      background: #E6F1FB; display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 600; color: #185FA5; flex-shrink: 0;
+    }
+
+    /* Signin center */
+    .signin-center { text-align: center; padding: 2.5rem 1rem; }
+    .signin-center i { font-size: 36px; color: var(--text-tertiary); display: block; margin-bottom: 12px; }
+    .signin-center p { font-size: 14px; color: var(--text-secondary); margin-bottom: 1.25rem; }
+
+    @media (max-width: 480px) {
+      body { padding: 1rem 0.5rem; }
+      .tab span { display: none; }
+      .stat-val { font-size: 18px; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="app-header">
+    <div class="app-icon"><i class="ti ti-robot"></i></div>
+    <div style="flex:1;">
+      <p class="app-title">Task & Email Agent</p>
+      <p class="app-subtitle" id="agent-subtitle">Sign in to connect Google Tasks</p>
+    </div>
+    <div id="status-badge"><span class="badge badge-amber">Not connected</span></div>
+  </div>
+
+  <!-- User bar (shown after sign-in) -->
+  <div class="user-bar" id="user-bar" style="display:none;">
+    <div class="avatar-placeholder" id="user-avatar">?</div>
+    <div style="flex:1;">
+      <p style="font-size:13px;font-weight:500;" id="user-name">Loading...</p>
+      <p style="font-size:12px;color:var(--text-secondary);" id="user-email-display"></p>
+    </div>
+    <button class="btn btn-outline btn-sm" onclick="signOut()">
+      <i class="ti ti-logout"></i> Sign out
+    </button>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('tasks')">
+      <i class="ti ti-checklist"></i><span>Tasks</span>
+    </button>
+    <button class="tab" onclick="switchTab('draft')">
+      <i class="ti ti-mail"></i><span>Draft email</span>
+    </button>
+    <button class="tab" onclick="switchTab('schedule')">
+      <i class="ti ti-bell"></i><span>Reminders</span>
+    </button>
+    <button class="tab" onclick="switchTab('connect')">
+      <i class="ti ti-plug"></i><span>Connect / AI Config</span>
+    </button>
+  </div>
+
+  <!-- ── TASKS TAB ── -->
+  <div id="tab-tasks" class="section active">
+
+    <div id="signin-prompt" class="card">
+      <div class="signin-center">
+        <i class="ti ti-brand-google"></i>
+        <p>Sign in with Google to load your real tasks from Google Tasks</p>
+        <button class="google-btn" style="max-width:260px;margin:0 auto;" onclick="signIn()">
+          <svg class="g-icon" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+          Sign in with Google
+        </button>
+      </div>
+    </div>
+
+    <div id="tasks-content" style="display:none;">
+      <div id="error-strip" class="error-strip" style="display:none;"></div>
+
+      <div class="reminder-strip">
+        <i class="ti ti-clock" style="font-size:16px;flex-shrink:0;color:#185FA5;"></i>
+        <p>Daily reminder: You have <strong id="pending-count">0</strong> pending tasks. Time to send your update email!</p>
+        <button class="btn btn-outline btn-sm" onclick="switchTab('draft')">Draft now →</button>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat">
+          <div class="stat-val" id="total-count">0</div>
+          <div class="stat-label">Total tasks</div>
+        </div>
+        <div class="stat">
+          <div class="stat-val" id="done-count" style="color:#3B6D11;">0</div>
+          <div class="stat-label">Completed</div>
+        </div>
+        <div class="stat">
+          <div class="stat-val" id="overdue-count" style="color:#A32D2D;">0</div>
+          <div class="stat-label">Overdue</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><i class="ti ti-list"></i> My tasks</span>
+          <button class="btn btn-outline btn-sm" onclick="fetchTasks()" id="refresh-btn">
+            <i class="ti ti-refresh"></i> Refresh
+          </button>
+        </div>
+        <div class="list-tabs" id="list-tabs"></div>
+        <div id="task-list">
+          <div class="empty-state"><span class="spinner"></span> Loading tasks...</div>
+        </div>
+        <div class="add-task-row">
+          <input type="text" id="new-task-input" placeholder="Add a task..." onkeydown="if(event.key==='Enter')addTask()" />
+          <button class="btn btn-outline btn-sm" onclick="addTask()">+ Add</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── DRAFT EMAIL TAB ── -->
+  <div id="tab-draft" class="section">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="ti ti-mail-forward"></i> Draft update email</span>
+      </div>
+
+      <label>Email type</label>
+      <select id="email-type">
+        <option value="daily">Daily task progress</option>
+        <option value="weekly">Weekly summary</option>
+        <option value="project">Project status update</option>
+      </select>
+
+      <label>Your name &amp; role</label>
+      <input type="text" id="sender-name" placeholder="e.g. Reky, Marketing Executive" />
+
+      <label>Manager's name</label>
+      <input type="text" id="manager-name" placeholder="e.g. Encik Azman" />
+
+      <label>Tasks to highlight <span style="color:var(--text-tertiary);font-size:12px;">(tap to select)</span></label>
+      <div class="task-chips" id="task-chips">
+        <span style="font-size:13px;color:var(--text-tertiary);">Sign in to load your tasks</span>
+      </div>
+
+      <label>Additional notes / blockers</label>
+      <textarea id="extra-notes" placeholder="e.g. Waiting for approval from client, will follow up tomorrow..."></textarea>
+
+      <label>Tone</label>
+      <select id="tone-select">
+        <option value="professional">Professional</option>
+        <option value="friendly">Friendly &amp; warm</option>
+        <option value="concise">Brief &amp; concise</option>
+        <option value="formal">Formal (Bahasa Melayu)</option>
+      </select>
+
+      <div style="display:flex;gap:8px;margin-top:16px;">
+        <button class="btn btn-primary" onclick="draftEmail()" style="flex:1;">
+          <i class="ti ti-sparkles"></i> Generate email
+        </button>
+        <button class="btn btn-outline" onclick="clearDraft()">Clear</button>
+      </div>
+    </div>
+
+    <div id="email-result" style="display:none;">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><i class="ti ti-mail-check"></i> Generated email</span>
+          <div style="display:flex;gap:6px;">
+            <button class="btn btn-outline btn-sm" onclick="copyEmail()">
+              <i class="ti ti-copy"></i> Copy
+            </button>
+            <button class="btn btn-outline btn-sm" onclick="openGmail()">
+              <i class="ti ti-external-link"></i> Gmail
+            </button>
+          </div>
+        </div>
+        <div style="margin-bottom:10px;padding-bottom:10px;border-bottom:0.5px solid var(--border-subtle);">
+          <span style="font-size:12px;color:var(--text-secondary);">Subject: </span>
+          <span style="font-size:13px;font-weight:500;" id="email-subject"></span>
+        </div>
+        <div class="email-output" id="email-body"></div>
+        <p style="font-size:11px;color:var(--text-tertiary);margin-top:8px;text-align:right;" id="ai-powered-text">
+          Powered by AI
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── REMINDERS TAB ── -->
+  <div id="tab-schedule" class="section">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="ti ti-bell-ringing"></i> Reminder schedule</span>
+      </div>
+      <div class="schedule-row">
+        <div>
+          <p style="font-size:14px;">Daily email reminder</p>
+          <p style="font-size:12px;color:var(--text-secondary);">Nudge me to send a progress update</p>
+        </div>
+        <label class="toggle"><input type="checkbox" checked><span class="slider-toggle"></span></label>
+      </div>
+      <div class="schedule-row">
+        <p style="font-size:14px;color:var(--text-secondary);">Reminder time</p>
+        <input type="time" value="08:30" style="width:auto;" />
+      </div>
+      <div class="schedule-row">
+        <div>
+          <p style="font-size:14px;">Weekly summary (Friday)</p>
+          <p style="font-size:12px;color:var(--text-secondary);">Auto-draft end-of-week report</p>
+        </div>
+        <label class="toggle"><input type="checkbox" checked><span class="slider-toggle"></span></label>
+      </div>
+      <div class="schedule-row">
+        <div>
+          <p style="font-size:14px;">Overdue task alert</p>
+          <p style="font-size:12px;color:var(--text-secondary);">Highlight tasks past their due date</p>
+        </div>
+        <label class="toggle"><input type="checkbox" checked><span class="slider-toggle"></span></label>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="ti ti-users"></i> Manager emails</span>
+      </div>
+      <label>Add manager email</label>
+      <div style="display:flex;gap:8px;">
+        <input type="email" id="manager-email-input" placeholder="manager@company.com" style="flex:1;" />
+        <button class="btn btn-outline btn-sm" onclick="addManager()">+ Add</button>
+      </div>
+      <div id="manager-list" style="margin-top:10px;display:flex;flex-direction:column;gap:6px;"></div>
+    </div>
+  </div>
+
+  <!-- ── CONNECT TAB ── -->
+  <div id="tab-connect" class="section">
+    
+    <!-- AI Provider Settings Box -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="ti ti-brain"></i> AI Provider Settings</span>
+      </div>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">Select your AI and add your API key to generate emails.</p>
+      
+      <label>AI Provider</label>
+      <select id="ai-provider">
+        <option value="gemini">Google Gemini</option>
+        <option value="openai">ChatGPT (OpenAI)</option>
+      </select>
+      
+      <label>API Key</label>
+      <input type="password" id="ai-api-key" placeholder="Enter your API Key here" />
+      
+      <button class="btn btn-outline btn-sm" style="margin-top:12px;" onclick="saveAIConfig()">
+        <i class="ti ti-device-floppy"></i> Save AI Settings
+      </button>
+      <div id="ai-save-msg" style="display:none; color:#639922; font-size:12px; margin-top:8px;">AI settings saved successfully!</div>
+    </div>
+
+    <!-- Google Login Box -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="ti ti-brand-google"></i> Google Tasks connection</span>
+      </div>
+
+      <div id="connect-signed-out">
+        <p style="font-size:13px;color:var(--text-secondary);margin-bottom:1rem;">
+          Sign in with Google to read your real task lists from Google Tasks.
+        </p>
+        <button class="google-btn" onclick="signIn()">
+          <svg class="g-icon" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+          Sign in with Google
+        </button>
+      </div>
+
+      <div id="connect-signed-in" style="display:none;">
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;">
+          <div style="width:10px;height:10px;border-radius:50%;background:#639922;flex-shrink:0;"></div>
+          <p style="font-size:14px;">Google Tasks connected</p>
+          <span class="badge badge-green" style="margin-left:auto;">Active</span>
+        </div>
+        <div class="divider"></div>
+        <button class="btn btn-outline btn-sm btn-full" onclick="signOut()">
+          <i class="ti ti-logout"></i> Disconnect Tasks
+        </button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="ti ti-info-circle"></i> How it works</span>
+      </div>
+      <div class="step"><div class="step-num">1</div><p style="font-size:13px;color:var(--text-secondary);padding-top:3px;">Add your Gemini or OpenAI API Key in the settings above</p></div>
+      <div class="step"><div class="step-num">2</div><p style="font-size:13px;color:var(--text-secondary);padding-top:3px;">Sign in with Google — the agent reads all your Google Tasks lists</p></div>
+      <div class="step"><div class="step-num">3</div><p style="font-size:13px;color:var(--text-secondary);padding-top:3px;">Pick tasks to highlight, choose email type &amp; tone — the AI writes the email</p></div>
+      <div class="step" style="margin-bottom:0;"><div class="step-num">4</div><p style="font-size:13px;color:var(--text-secondary);padding-top:3px;">Review, copy, and send via Gmail with one tap</p></div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<script>
+  const CLIENT_ID = '735670416486-pa3hqb63vcsh5upa5ecv4ikt62uj085d.apps.googleusercontent.com';
+  const SCOPE = 'https://www.googleapis.com/auth/tasks https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
+  const TASKS_BASE = 'https://tasks.googleapis.com/tasks/v1';
+
+  let accessToken = null;
+  let taskLists = [];
+  let allTasks = [];
+  let selectedListId = 'all';
+  let selectedTaskIds = new Set();
+  let managers = JSON.parse(localStorage.getItem('agent_managers') || '[]');
+
+  // Load saved AI configurations on boot
+  function loadAIConfig() {
+    const provider = localStorage.getItem('ai_provider') || 'gemini';
+    const key = localStorage.getItem('ai_api_key') || '';
+    document.getElementById('ai-provider').value = provider;
+    document.getElementById('ai-api-key').value = key;
+  }
+
+  // Save AI configurations to local storage
+  function saveAIConfig() {
+    localStorage.setItem('ai_provider', document.getElementById('ai-provider').value);
+    localStorage.setItem('ai_api_key', document.getElementById('ai-api-key').value.trim());
+    const msg = document.getElementById('ai-save-msg');
+    msg.style.display = 'block';
+    setTimeout(() => { msg.style.display = 'none'; }, 3000);
+  }
+
+  function saveManagers() { localStorage.setItem('agent_managers', JSON.stringify(managers)); }
+
+  function showError(msg) {
+    const el = document.getElementById('error-strip');
+    el.textContent = msg; el.style.display = 'block';
+    setTimeout(() => { el.style.display = 'none'; }, 7000);
+  }
+
+  function signIn() {
+    if (!window.google) { alert('Google sign-in is loading, please try again in a moment.'); return; }
+    google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID, scope: SCOPE,
+      callback: async (resp) => {
+        if (resp.error) { showError('Sign-in failed: ' + resp.error); return; }
+        accessToken = resp.access_token;
+        await loadUserInfo();
+        await fetchTasks();
+        showSignedIn();
+      }
+    }).requestAccessToken({ prompt: 'consent' });
+  }
+
+  function signOut() {
+    if (accessToken && window.google) google.accounts.oauth2.revoke(accessToken);
+    accessToken = null; taskLists = []; allTasks = [];
+    selectedListId = 'all'; selectedTaskIds.clear();
+    document.getElementById('signin-prompt').style.display = 'block';
+    document.getElementById('tasks-content').style.display = 'none';
+    document.getElementById('user-bar').style.display = 'none';
+    document.getElementById('connect-signed-out').style.display = 'block';
+    document.getElementById('connect-signed-in').style.display = 'none';
+    document.getElementById('status-badge').innerHTML = '<span class="badge badge-amber">Not connected</span>';
+    document.getElementById('agent-subtitle').textContent = 'Sign in to connect Google Tasks';
+    document.getElementById('task-chips').innerHTML = '<span style="font-size:13px;color:var(--text-tertiary);">Sign in to load your tasks</span>';
+    updateStats(0,0,0,0);
+  }
+
+  function showSignedIn() {
+    document.getElementById('signin-prompt').style.display = 'none';
+    document.getElementById('tasks-content').style.display = 'block';
+    document.getElementById('user-bar').style.display = 'flex';
+    document.getElementById('connect-signed-out').style.display = 'none';
+    document.getElementById('connect-signed-in').style.display = 'block';
+    document.getElementById('status-badge').innerHTML = '<span class="badge badge-green">Connected</span>';
+    document.getElementById('agent-subtitle').textContent = 'Google Tasks connected';
+  }
+
+  async function loadUserInfo() {
+    try {
+      const r = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', { headers: { Authorization: 'Bearer ' + accessToken } });
+      const u = await r.json();
+      document.getElementById('user-name').textContent = u.name || 'Google User';
+      document.getElementById('user-email-display').textContent = u.email || '';
+      const ph = document.getElementById('user-avatar');
+      if (u.picture) {
+        const img = document.createElement('img');
+        img.className = 'avatar'; img.src = u.picture; img.alt = 'Profile';
+        ph.replaceWith(img);
+      } else { ph.textContent = (u.name || 'G')[0].toUpperCase(); }
+    } catch {}
+  }
+
+  async function fetchTasks() {
+    if (!accessToken) return;
+    document.getElementById('task-list').innerHTML = '<div class="empty-state"><span class="spinner"></span> Loading...</div>';
+    try {
+      const lr = await fetch(`${TASKS_BASE}/users/@me/lists?maxResults=20`, { headers: { Authorization: 'Bearer ' + accessToken } });
+      if (!lr.ok) { showError('Could not load task lists. Please sign in again.'); return; }
+      taskLists = (await lr.json()).items || [];
+      allTasks = [];
+      for (const list of taskLists) {
+        const tr = await fetch(`${TASKS_BASE}/lists/${list.id}/tasks?maxResults=100&showCompleted=true`, { headers: { Authorization: 'Bearer ' + accessToken } });
+        if (!tr.ok) continue;
+        const items = ((await tr.json()).items || []).map(t => ({
+          id: t.id, listId: list.id, listTitle: list.title,
+          name: t.title, done: t.status === 'completed',
+          due: classifyDue(t.due), notes: t.notes || ''
+        }));
+        allTasks = allTasks.concat(items);
+      }
+      renderListTabs(); renderTaskList(); renderChips();
+    } catch(e) { showError('Error loading tasks: ' + e.message); }
+  }
+
+  function classifyDue(d) {
+    if (!d) return 'upcoming';
+    const due = new Date(d); const today = new Date();
+    today.setHours(0,0,0,0); due.setHours(0,0,0,0);
+    if (due < today) return 'overdue';
+    if (due.getTime() === today.getTime()) return 'today';
+    return 'upcoming';
+  }
+
+  function renderListTabs() {
+    const tabs = [{ id:'all', title:'All' }, ...taskLists.map(l => ({ id: l.id, title: l.title }))];
+    document.getElementById('list-tabs').innerHTML = tabs.map(t =>
+      `<button class="list-tab ${selectedListId===t.id?'active':''}" onclick="selectList('${t.id}')">${esc(t.title)}</button>`
+    ).join('');
+  }
+
+  function selectList(id) { selectedListId = id; renderListTabs(); renderTaskList(); }
+
+  function renderTaskList() {
+    const filtered = selectedListId === 'all' ? allTasks : allTasks.filter(t => t.listId === selectedListId);
+    if (!filtered.length) {
+      document.getElementById('task-list').innerHTML = '<div class="empty-state">No tasks here</div>';
+      updateStats(0,0,0,0); return;
+    }
+    const total = filtered.length, done = filtered.filter(t=>t.done).length;
+    const overdue = filtered.filter(t=>!t.done&&t.due==='overdue').length;
+    const pending = filtered.filter(t=>!t.done).length;
+    updateStats(total, done, overdue, pending);
+    document.getElementById('task-list').innerHTML = filtered.map(t => `
+      <div class="task-item">
+        <div class="task-check ${t.done?'done':''}" onclick="toggleTask('${t.listId}','${t.id}',${t.done})" role="checkbox" aria-checked="${t.done}" tabindex="0"></div>
+        <div style="flex:1;">
+          <p class="task-name ${t.done?'done':''}">${esc(t.name)}</p>
+          <p class="task-meta">${esc(t.listTitle)}</p>
+        </div>
+        ${t.done ? '<span class="task-due due-done">Done</span>' : t.due==='today' ? '<span class="task-due due-today">Today</span>' : t.due==='overdue' ? '<span class="task-due due-overdue">Overdue</span>' : ''}
+      </div>`).join('');
+  }
+
+  function updateStats(total, done, overdue, pending) {
+    document.getElementById('total-count').textContent = total;
+    document.getElementById('done-count').textContent = done;
+    document.getElementById('overdue-count').textContent = overdue;
+    document.getElementById('pending-count').textContent = pending;
+  }
+
+  async function toggleTask(listId, taskId, isDone) {
+    if (!accessToken) return;
+    const task = allTasks.find(t => t.id === taskId);
+    if (!task) return;
+    try {
+      await fetch(`${TASKS_BASE}/lists/${listId}/tasks/${taskId}`, {
+        method: 'PATCH',
+        headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: isDone ? 'needsAction' : 'completed' })
+      });
+      task.done = !isDone; renderTaskList(); renderChips();
+    } catch { showError('Could not update task.'); }
+  }
+
+  async function addTask() {
+    const input = document.getElementById('new-task-input');
+    const val = input.value.trim();
+    if (!val || !accessToken) return;
+    const targetId = selectedListId === 'all' ? (taskLists[0] && taskLists[0].id) : selectedListId;
+    if (!targetId) return;
+    try {
+      const r = await fetch(`${TASKS_BASE}/lists/${targetId}/tasks`, {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: val, status: 'needsAction' })
+      });
+      if (!r.ok) { showError('Could not add task.'); return; }
+      input.value = ''; await fetchTasks();
+    } catch(e) { showError('Error: ' + e.message); }
+  }
+
+  function renderChips() {
+    const active = allTasks.filter(t => !t.done);
+    document.getElementById('task-chips').innerHTML = active.length
+      ? active.map(t => `<span class="chip ${selectedTaskIds.has(t.id)?'selected':''}" onclick="toggleChip('${t.id}')">${esc(t.name)}</span>`).join('')
+      : '<span style="font-size:13px;color:var(--text-tertiary);">All tasks completed!</span>';
+  }
+
+  function toggleChip(id) {
+    selectedTaskIds.has(id) ? selectedTaskIds.delete(id) : selectedTaskIds.add(id);
+    renderChips();
+  }
+
+  async function draftEmail() {
+    const apiKey = localStorage.getItem('ai_api_key');
+    if (!apiKey) {
+      alert('Please add your AI API Key in the "Connect / AI Config" tab first.');
+      switchTab('connect');
+      return;
+    }
+    const aiProvider = localStorage.getItem('ai_provider') || 'gemini';
+
+    const emailType = document.getElementById('email-type').value;
+    const senderName = document.getElementById('sender-name').value || 'Team member';
+    const managerName = document.getElementById('manager-name').value || 'Manager';
+    const extraNotes = document.getElementById('extra-notes').value;
+    const tone = document.getElementById('tone-select').value;
+    const chosen = allTasks.filter(t => selectedTaskIds.has(t.id));
+    const list = chosen.length ? chosen : allTasks.filter(t => !t.done);
+    const taskSummary = list.length ? list.map(t => `- ${t.name} (${t.due})`).join('\n') : '- No tasks selected';
+    const typeLabel = { daily:'Daily Progress Update', weekly:'Weekly Summary', project:'Project Status Update' }[emailType];
+    const toneGuide = { professional:'professional and clear', friendly:'warm and friendly', concise:'brief and to the point', formal:'formal, written in Bahasa Melayu' }[tone];
+
+    // Added instruction specifically requesting JSON format
+    const prompt = `Write a ${toneGuide} ${typeLabel} email from ${senderName} to their manager ${managerName}.\n\nTasks:\n${taskSummary}\n${extraNotes ? '\nNotes: ' + extraNotes : ''}\n\nRespond ONLY with a valid JSON object containing exactly two keys: "subject" and "body". Do NOT include markdown blocks (\`\`\`json) outside the JSON.`;
+
+    const result = document.getElementById('email-result');
+    const bodyEl = document.getElementById('email-body');
+    const subjEl = document.getElementById('email-subject');
+    const footerEl = document.getElementById('ai-powered-text');
+    
+    result.style.display = 'block';
+    bodyEl.innerHTML = '<div class="loading-dots"><span></span><span></span><span></span></div>';
+    subjEl.textContent = '';
+    footerEl.textContent = `Powered by ${aiProvider === 'openai' ? 'ChatGPT' : 'Google Gemini'}`;
+
+    try {
+      let parsedData;
+
+      if (aiProvider === 'openai') {
+        const res = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({ 
+            model: 'gpt-4o-mini', 
+            response_format: { type: "json_object" },
+            messages: [{ role: 'user', content: prompt }] 
+          })
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error.message);
+        
+        const text = data.choices[0].message.content;
+        parsedData = JSON.parse(text);
+
+      } else {
+        // Google Gemini API Call
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { responseMimeType: "application/json" }
+          })
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error.message);
+
+        const text = data.candidates[0].content.parts[0].text;
+        parsedData = JSON.parse(text);
+      }
+
+      subjEl.textContent = parsedData.subject || 'Update Email';
+      bodyEl.textContent = parsedData.body || 'Email generated successfully.';
+      
+    } catch (e) { 
+      bodyEl.textContent = 'Error generating email: ' + e.message; 
+    }
+  }
+
+  function clearDraft() {
+    ['sender-name','manager-name','extra-notes'].forEach(id => document.getElementById(id).value = '');
+    selectedTaskIds.clear(); renderChips();
+    document.getElementById('email-result').style.display = 'none';
+  }
+
+  function copyEmail() {
+    const s = document.getElementById('email-subject').textContent;
+    const b = document.getElementById('email-body').textContent;
+    navigator.clipboard.writeText('Subject: ' + s + '\n\n' + b).then(() => alert('Copied!')).catch(() => {});
+  }
+
+  function openGmail() {
+    const s = encodeURIComponent(document.getElementById('email-subject').textContent);
+    const b = encodeURIComponent(document.getElementById('email-body').textContent);
+    const to = encodeURIComponent(managers.join(','));
+    window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${to}&su=${s}&body=${b}`, '_blank');
+  }
+
+  function addManager() {
+    const input = document.getElementById('manager-email-input');
+    const val = input.value.trim();
+    if (!val || !val.includes('@')) return;
+    managers.push(val); input.value = ''; saveManagers(); renderManagers();
+  }
+
+  function removeManager(i) { managers.splice(i,1); saveManagers(); renderManagers(); }
+
+  function renderManagers() {
+    document.getElementById('manager-list').innerHTML = managers.length
+      ? managers.map((m,i) => `
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--bg-secondary);border-radius:var(--radius-md);font-size:13px;">
+          <i class="ti ti-mail" style="font-size:14px;color:var(--text-secondary);"></i>
+          <span style="flex:1;">${esc(m)}</span>
+          <span onclick="removeManager(${i})" style="cursor:pointer;color:var(--text-tertiary);font-size:18px;line-height:1;" role="button">&times;</span>
+        </div>`).join('')
+      : '<p style="font-size:13px;color:var(--text-tertiary);">No managers added yet.</p>';
+  }
+
+  function switchTab(name) {
+    const names = ['tasks','draft','schedule','connect'];
+    document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', names[i]===name));
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.getElementById('tab-'+name).classList.add('active');
+    if (name === 'draft') renderChips();
+  }
+
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // Initialization
+  renderManagers();
+  loadAIConfig();
+</script>
+</body>
+</html>
