@@ -549,6 +549,9 @@
         <option value="openai">ChatGPT (OpenAI)</option>
       </select>
       
+      <label>Model Name <span style="font-size:12px;color:var(--text-tertiary);">(e.g. gemini-2.5-flash, gpt-4o-mini)</span></label>
+      <input type="text" id="ai-model-name" placeholder="gemini-2.5-flash" />
+      
       <label>API Key</label>
       <input type="password" id="ai-api-key" placeholder="Enter your API Key here" />
       
@@ -616,14 +619,17 @@
   function loadAIConfig() {
     const provider = localStorage.getItem('ai_provider') || 'gemini';
     const key = localStorage.getItem('ai_api_key') || '';
+    const model = localStorage.getItem('ai_model') || 'gemini-2.5-flash';
     document.getElementById('ai-provider').value = provider;
     document.getElementById('ai-api-key').value = key;
+    document.getElementById('ai-model-name').value = model;
   }
 
   // Save AI configurations to local storage
   function saveAIConfig() {
     localStorage.setItem('ai_provider', document.getElementById('ai-provider').value);
     localStorage.setItem('ai_api_key', document.getElementById('ai-api-key').value.trim());
+    localStorage.setItem('ai_model', document.getElementById('ai-model-name').value.trim());
     const msg = document.getElementById('ai-save-msg');
     msg.style.display = 'block';
     setTimeout(() => { msg.style.display = 'none'; }, 3000);
@@ -810,6 +816,7 @@
       return;
     }
     const aiProvider = localStorage.getItem('ai_provider') || 'gemini';
+    const aiModel = localStorage.getItem('ai_model') || (aiProvider === 'openai' ? 'gpt-4o-mini' : 'gemini-2.5-flash');
 
     const emailType = document.getElementById('email-type').value;
     const senderName = document.getElementById('sender-name').value || 'Team member';
@@ -833,7 +840,7 @@
     result.style.display = 'block';
     bodyEl.innerHTML = '<div class="loading-dots"><span></span><span></span><span></span></div>';
     subjEl.textContent = '';
-    footerEl.textContent = `Powered by ${aiProvider === 'openai' ? 'ChatGPT' : 'Google Gemini'}`;
+    footerEl.textContent = `Powered by ${aiProvider === 'openai' ? 'ChatGPT' : 'Google Gemini'} (${aiModel})`;
 
     try {
       let parsedData;
@@ -846,7 +853,7 @@
             'Authorization': `Bearer ${apiKey}`
           },
           body: JSON.stringify({ 
-            model: 'gpt-4o-mini', 
+            model: aiModel, 
             response_format: { type: "json_object" },
             messages: [{ role: 'user', content: prompt }] 
           })
@@ -859,7 +866,7 @@
 
       } else {
         // Google Gemini API Call
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${aiModel}:generateContent?key=${apiKey}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
